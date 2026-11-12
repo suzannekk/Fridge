@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f8f3ea">
+<title>What's in my fridge?</title>
+<style>
+  /* ---------- Theme ---------- */
+  :root {
+    --cream: #f8f3ea;
+    --cream-deep: #efe6d6;
+    --card: #ffffff;
+    --ink: #3b3530;
+    --muted: #7d736a;
+    --sage: #8fa98a;
+    --sage-dark: #5f7d5b;
+    --sage-soft: #e5ede2;
+    --terra: #d07a5a;
+    --terra-dark: #b25f41;
+    --terra-soft: #f8e4da;
+    --line: #e6dccb;
+    --shadow: 0 6px 24px rgba(92, 72, 50, 0.08), 0 1px 3px rgba(92, 72, 50, 0.06);
+    --radius: 20px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--cream);
+    color: var(--ink);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; font-weight: normal; margin: 0; }
+  button, input { font: inherit; color: inherit; }
+  [hidden] { display: none !important; }
+
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+
+  /* ---------- Header ---------- */
+  header { text-align: center; padding: 36px 16px 18px; }
+  .logo {
+    font-size: 44px; width: 76px; height: 76px; line-height: 76px; margin: 0 auto 10px;
+    background: var(--card); border-radius: 50%; box-shadow: var(--shadow);
+  }
+  header h1 { font-size: clamp(28px, 6vw, 40px); color: var(--ink); }
+  .tagline { color: var(--muted); margin: 6px 0 0; }
+
+  /* ---------- Step bar ---------- */
+  .stepbar {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(248, 243, 234, 0.92);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 0;
+  }
+  .stepbar ol {
+    list-style: none; margin: 0 auto; padding: 0 16px; max-width: 1040px;
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+  }
+  .stepbar a {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 999px; text-decoration: none;
+    color: var(--muted); font-size: 14px; border: 1px solid transparent;
+    transition: background .2s, color .2s;
+  }
+  .stepbar a .num {
+    display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--cream-deep); font-size: 12px; font-weight: 600;
+  }
+  .stepbar a.active { background: var(--sage); color: #fff; }
+  .stepbar a.active .num { background: rgba(255,255,255,.3); }
+  .stepbar a.locked { opacity: .45; pointer-events: none; }
+
+  /* ---------- Sections & cards ---------- */
+  section.step { padding: 32px 0 8px; scroll-margin-top: 64px; }
+  .step-head { margin-bottom: 16px; }
+  .step-head .kicker {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--terra-dark); font-weight: 600;
+  }
+  .step-head h2 { font-size: clamp(24px, 4.5vw, 30px); margin-top: 2px; }
+  .step-head p { color: var(--muted); margin: 4px 0 0; }
+
+  .card {
+    background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 22px;
+  }
+  .card h3 { font-size: 20px; margin-bottom: 4px; }
+  .card .sub { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 760px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .card { padding: 18px; }
+  }
+
+  /* ---------- Buttons & chips ---------- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border: none; border-radius: 999px; padding: 11px 20px; cursor: pointer;
+    background: var(--terra); color: #fff; font-weight: 600;
+    transition: background .2s, transform .1s; min-height: 44px;
+  }
+  .btn:hover { background: var(--terra-dark); }
+  .btn:active { transform: scale(.98); }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .btn.sage { background: var(--sage); }
+  .btn.sage:hover { background: var(--sage-dark); }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .btn.ghost:hover { background: var(--cream); }
+  .btn.big { padding: 14px 28px; font-size: 17px; }
+
+  .linkish {
+    background: none; border: none; padding: 0; cursor: pointer;
+    color: var(--terra-dark); text-decoration: underline; font-size: 14px;
+  }
+
+  .pill {
+    border: 1px solid var(--line); background: var(--card); border-radius: 999px;
+    padding: 9px 16px; cursor: pointer; min-height: 40px;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .pill:hover { border-color: var(--sage); }
+  .pill[aria-pressed="true"], .pill[aria-checked="true"] {
+    background: var(--sage); border-color: var(--sage); color: #fff;
+  }
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .suggest { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .suggest button {
+    border: 1px dashed var(--line); background: var(--cream); border-radius: 999px;
+    padding: 6px 12px; cursor: pointer; font-size: 14px;
+  }
+  .suggest button:hover { border-color: var(--sage); background: var(--sage-soft); }
+
+  :focus-visible { outline: 3px solid var(--terra); outline-offset: 2px; }
+
+  /* ---------- Step 1: photo ---------- */
+  .drop {
+    border: 2px dashed var(--line); border-radius: 16px; background: var(--cream);
+    min-height: 180px; display: grid; place-items: center; text-align: center;
+    padding: 18px; cursor: pointer; position: relative; transition: border-color .2s, background .2s;
+  }
+  .drop:hover, .drop.over { border-color: var(--sage); background: var(--sage-soft); }
+  .drop .big-emoji { font-size: 38px; }
+  .drop small { color: var(--muted); display: block; }
+  .drop img { max-width: 100%; max-height: 260px; border-radius: 12px; display: block; }
+  .photo-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+  details.key {
+    margin-top: 14px; background: var(--cream); border-radius: 14px; padding: 10px 14px; font-size: 14px;
+  }
+  details.key summary { cursor: pointer; color: var(--muted); }
+  details.key p { margin: 8px 0; color: var(--muted); }
+  .key-row { display: flex; gap: 8px; }
+
+  .status { font-size: 14px; margin-top: 10px; min-height: 1.5em; color: var(--muted); }
+  .status.err { color: var(--terra-dark); }
+  .status.ok { color: var(--sage-dark); }
+
+  .text-in {
+    flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 999px;
+    padding: 11px 16px; background: var(--cream); min-height: 44px;
+  }
+  .text-in:focus { outline: none; border-color: var(--sage); background: #fff; }
+  .input-row { display: flex; gap: 8px; }
+
+  /* ---------- Ingredient chips ---------- */
+  .pantry { margin-top: 20px; }
+  .pantry-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .count {
+    display: inline-block; background: var(--terra-soft); color: var(--terra-dark);
+    border-radius: 999px; padding: 1px 10px; font-size: 14px; font-weight: 600; margin-left: 6px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--sage-soft); color: var(--sage-dark); border-radius: 999px;
+    padding: 6px 6px 6px 14px; font-size: 15px;
+  }
+  .chip button {
+    border: none; background: rgba(255,255,255,.7); border-radius: 50%; width: 26px; height: 26px;
+    cursor: pointer; line-height: 1; color: var(--sage-dark);
+  }
+  .chip button:hover { background: #fff; color: var(--terra-dark); }
+  .empty { text-align: center; color: var(--muted); padding: 18px; }
+  .empty .big-emoji { font-size: 32px; display: block; }
+
+  /* ---------- Step 2: check-in ---------- */
+  .checkin-group { margin-bottom: 20px; }
+  .checkin-group:last-of-type { margin-bottom: 0; }
+  .label { font-weight: 600; margin-bottom: 8px; display: block; }
+  .label small { font-weight: normal; color: var(--muted); }
+  .cta-row { text-align: center; margin-top: 22px; }
+  .cta-row .status { text-align: center; }
+
+  /* ---------- Step 3: meals ---------- */
+  .meals { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+  .meal {
+    position: relative; cursor: pointer; border: 2px solid transparent;
+    transition: border-color .2s, transform .15s; display: flex; flex-direction: column; gap: 8px;
+  }
+  .meal:hover { transform: translateY(-2px); }
+  .meal[aria-pressed="true"] { border-color: var(--sage); background: #fbfdfa; }
+  .meal .tick {
+    position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 50%;
+    border: 2px solid var(--line); display: grid; place-items: center; color: #fff; font-weight: bold;
+  }
+  .meal[aria-pressed="true"] .tick { background: var(--sage); border-color: var(--sage); }
+  .meal-top { display: flex; gap: 12px; align-items: center; padding-right: 36px; }
+  .meal-emoji {
+    font-size: 30px; width: 54px; height: 54px; flex: none; border-radius: 16px;
+    background: var(--cream); display: grid; place-items: center;
+  }
+  .meal h3 { font-size: 19px; line-height: 1.25; }
+  .meal .note { color: var(--muted); font-size: 14px; margin: 0; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag { font-size: 12px; background: var(--terra-soft); color: var(--terra-dark); border-radius: 999px; padding: 3px 10px; }
+  .bar { height: 8px; background: var(--cream-deep); border-radius: 999px; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--sage); border-radius: 999px; }
+  .have { font-size: 14px; color: var(--sage-dark); font-weight: 600; }
+  .need { font-size: 14px; color: var(--muted); margin: 0; }
+  .need.all { color: var(--sage-dark); }
+
+  /* ---------- Step 4: shopping ---------- */
+  .goal-banner {
+    background: var(--terra-soft); border-left: 5px solid var(--terra);
+    border-radius: 14px; padding: 12px 16px; margin-bottom: 16px;
+  }
+  .goal-banner strong { color: var(--terra-dark); }
+  .shop-list { list-style: none; margin: 0; padding: 0; }
+  .shop-list li + li { border-top: 1px solid var(--line); }
+  .shop-item {
+    display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+    background: none; border: none; padding: 12px 4px; cursor: pointer; min-height: 52px;
+  }
+  .box {
+    flex: none; width: 24px; height: 24px; border-radius: 8px; border: 2px solid var(--sage);
+    display: grid; place-items: center; color: #fff; font-size: 14px;
+  }
+  .shop-item[aria-checked="true"] .box { background: var(--sage); }
+  .shop-item[aria-checked="true"] .name { text-decoration: line-through; color: var(--muted); }
+  .shop-item .name { font-weight: 600; display: block; text-transform: capitalize; }
+  .shop-item .for { font-size: 13px; color: var(--muted); }
+  .shop-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 40px 16px 32px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo" aria-hidden="true">🥕</div>
+  <h1>What's in my fridge?</h1>
+  <p class="tagline">Turn what you already have into a gentle week of meals.</p>
+</header>
+
+<nav class="stepbar" aria-label="Steps">
+  <ol>
+    <li><a href="#step-1" data-step="1" class="active"><span class="num">1</span>Ingredients</a></li>
+    <li><a href="#step-2" data-step="2"><span class="num">2</span>Check-in</a></li>
+    <li><a href="#step-3" data-step="3" class="locked"><span class="num">3</span>Meals</a></li>
+    <li><a href="#step-4" data-step="4" class="locked"><span class="num">4</span>Shopping</a></li>
+  </ol>
+</nav>
+
+<main class="wrap">
+
+  <!-- ================= STEP 1 ================= -->
+  <section class="step" id="step-1">
+    <div class="step-head">
+      <div class="kicker">Step 1</div>
+      <h2>What have you got?</h2>
+      <p>Snap your fridge, type a list, or both.</p>
+    </div>
+
+    <div class="grid-2">
+      <!-- Picture -->
+      <div class="card">
+        <h3>📸 Share a picture</h3>
+        <p class="sub">Open your fridge or cupboard and take a photo.</p>
+
+        <div class="drop" id="drop" role="button" tabindex="0" aria-label="Upload a photo">
+          <div id="dropEmpty">
+            <div class="big-emoji">🖼️</div>
+            <strong>Tap to take or choose a photo</strong>
+            <small>or drag and drop one here</small>
+          </div>
+          <img id="preview" alt="Your photo" hidden>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" hidden>
+
+        <div class="photo-actions" id="photoActions" hidden>
+          <button class="btn sage" id="readPhoto">✨ Read my photo</button>
+          <button class="btn ghost" id="removePhoto">Remove</button>
+        </div>
+        <div class="status" id="photoStatus" role="status" aria-live="polite"></div>
+
+        <details class="key">
+          <summary>🔑 Reading photos needs a Claude API key</summary>
+          <p>Optional. Your key is saved only in this browser (localStorage) and sent straight to Anthropic.</p>
+          <div class="key-row">
+            <input class="text-in" id="apiKey" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+            <button class="btn ghost" id="saveKey">Save</button>
+          </div>
+          <div class="status" id="keyStatus" role="status" aria-live="polite"></div>
+        </details>
+      </div>
+
+      <!-- Typing -->
+      <div class="card">
+        <h3>⌨️ Or just type it</h3>
+        <p class="sub">Separate items with commas, then press Enter.</p>
+        <form class="input-row" id="addForm">
+          <input class="text-in" id="ingInput" type="text" placeholder="e.g. eggs, spinach, feta"
+                 autocomplete="off" aria-label="Ingredients">
+          <button class="btn" type="submit">Add</button>
+        </form>
+        <div class="suggest" id="suggest" aria-label="Quick add"></div>
+      </div>
+    </div>
+
+    <!-- Ingredient chips -->
+    <div class="card pantry">
+      <div class="pantry-head">
+        <h3>🧺 Your ingredients <span class="count" id="ingCount">0</span></h3>
+        <button class="linkish" id="clearAll" hidden>Clear all</button>
+      </div>
+      <div class="chips" id="chips"></div>
+      <div class="empty" id="emptyIng">
+        <span class="big-emoji">🥚</span>
+        Nothing here yet — add a few things you have and we'll take it from there.
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= STEP 2 ================= -->
+  <section class="step" id="step-2">
+    <div class="step-head">
+      <div class="kicker">Step 2</div>
+      <h2>Weekly check-in</h2>
+      <p>A quick read on how you're feeling, so the meals fit your week.</p>
+    </div>
+
+    <div class="card">
+      <div class="checkin-group">
+        <span class="label" id="lblEnergy">⚡ Energy</span>
+        <div class="pill-row" role="radiogroup" aria-labelledby="lblEnergy" data-group="energy"></div>
+      </div>
+      <div class="checkin-group">
+        <span class="label" id="lblSeason">🍂 Season</span>
+        <div class="pill-row" role="radiogroup" aria-labelledby="lblSeason" data-group="season"></div>
+      </div>
+      <div class="checkin-group">
+        <span class="label" id="lblCycle">🌙 Time in cycle <small>(optional)</small></span>
+        <div class="pill-row" role="radiogroup" aria-labelledby="lblCycle" data-group="cycle"></div>
+      </div>
+      <div class="checkin-group">
+        <span class="label" id="lblCrave">😋 Cravings <small>(pick any)</small></span>
+        <div class="pill-row" aria-labelledby="lblCrave" data-group="cravings"></div>
+      </div>
+      <div class="checkin-group">
+        <label class="label" for="goals">🎯 Goals this week <small>(just for you)</small></label>
+        <input class="text-in" id="goals" type="text" placeholder="e.g. more greens, cook at home 4 nights" style="width:100%">
+      </div>
+    </div>
+
+    <div class="cta-row">
+      <button class="btn big" id="suggestBtn">🍽️ Suggest meals</button>
+      <div class="status err" id="suggestStatus" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- ================= STEP 3 ================= -->
+  <section class="step" id="step-3" hidden>
+    <div class="step-head">
+      <div class="kicker">Step 3</div>
+      <h2>Meals for you</h2>
+      <p>Tap the ones you'd like to cook this week.</p>
+    </div>
+    <div class="meals" id="meals"></div>
+    <div class="cta-row">
+      <button class="btn big" id="shopBtn">📝 Draft my shopping list</button>
+      <div class="status err" id="shopStatus" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- ================= STEP 4 ================= -->
+  <section class="step" id="step-4" hidden>
+    <div class="step-head">
+      <div class="kicker">Step 4</div>
+      <h2>Your shopping list</h2>
+      <p id="shopSub"></p>
+    </div>
+    <div class="card">
+      <div class="goal-banner" id="goalBanner" hidden></div>
+      <ul class="shop-list" id="shopList"></ul>
+      <div class="empty" id="shopEmpty" hidden>
+        <span class="big-emoji">🎉</span>
+        Nothing to buy — you've got everything for these meals already.
+      </div>
+      <div class="shop-foot" id="shopFoot">
+        <span class="status" id="copyStatus" role="status" aria-live="polite"></span>
+        <button class="btn sage" id="copyBtn">📋 Copy list</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>Made with 🌿 — everything stays in your browser.</footer>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ======================================================
+     Data
+     ====================================================== */
+
+  const SUGGESTIONS = ['eggs', 'spinach', 'rice', 'tomato', 'onion', 'garlic', 'chicken',
+                       'pasta', 'lentils', 'sweet potato', 'feta', 'yoghurt', 'oats', 'banana'];
+
+  const OPTIONS = {
+    energy:   [['low', '🪫 Low'], ['medium', '🙂 Medium'], ['high', '⚡ High']],
+    season:   [['spring', '🌷 Spring'], ['summer', '☀️ Summer'], ['autumn', '🍂 Autumn'], ['winter', '❄️ Winter']],
+    cycle:    [['', 'Skip'], ['menstrual', '🩸 Menstrual'], ['follicular', '🌱 Follicular'],
+               ['ovulation', '🌕 Ovulation'], ['luteal', '🍂 Luteal']],
+    cravings: [['comforting', '🫶 Comforting'], ['fresh', '🥗 Fresh and light'], ['sweet', '🍯 Sweet'],
+               ['savoury', '🧂 Savoury'], ['spicy', '🌶️ Spicy']]
+  };
+
+  // Staples we assume everyone has: ignored for scoring and shopping.
+  const STAPLES = ['olive oil', 'oil', 'salt', 'pepper', 'black pepper', 'water', 'vegetable oil', 'sugar'];
+
+  const MEALS = [
+    { name: 'Spinach & Feta Omelette', emoji: '🍳', ingredients: ['eggs', 'spinach', 'feta', 'olive oil', 'salt', 'pepper'],
+      phases: ['follicular', 'ovulation'], seasons: ['spring', 'summer'], energy: ['low', 'medium'],
+      cravings: ['savoury', 'fresh'], note: 'Protein-packed and ready in ten minutes' },
+    { name: 'Red Lentil Dal', emoji: '🍛', ingredients: ['red lentils', 'onion', 'garlic', 'ginger', 'tomato', 'turmeric', 'coconut milk', 'rice'],
+      phases: ['menstrual', 'luteal'], seasons: ['autumn', 'winter'], energy: ['low', 'medium'],
+      cravings: ['comforting', 'spicy', 'savoury'], note: 'Iron-rich and warming' },
+    { name: 'Tomato & Garlic Pasta', emoji: '🍝', ingredients: ['pasta', 'tomato', 'garlic', 'basil', 'parmesan', 'olive oil'],
+      phases: ['follicular', 'luteal'], seasons: ['summer', 'autumn'], energy: ['low', 'medium', 'high'],
+      cravings: ['comforting', 'savoury'], note: 'A cosy classic that never lets you down' },
+    { name: 'Chicken & Veg Stir-fry', emoji: '🥢', ingredients: ['chicken', 'broccoli', 'bell pepper', 'garlic', 'ginger', 'soy sauce', 'rice'],
+      phases: ['follicular', 'ovulation'], seasons: ['spring', 'summer', 'autumn'], energy: ['medium', 'high'],
+      cravings: ['savoury', 'spicy'], note: 'Quick, colourful and full of crunch' },
+    { name: 'Sweet Potato & Black Bean Chilli', emoji: '🌶️', ingredients: ['sweet potato', 'black beans', 'onion', 'garlic', 'tomato', 'chilli', 'cumin'],
+      phases: ['luteal', 'menstrual'], seasons: ['autumn', 'winter'], energy: ['medium', 'high'],
+      cravings: ['comforting', 'spicy'], note: 'Fibre-rich, steadying slow carbs' },
+    { name: 'Greek Salad with Chickpeas', emoji: '🥗', ingredients: ['cucumber', 'tomato', 'red onion', 'feta', 'olives', 'chickpeas', 'olive oil'],
+      phases: ['ovulation', 'follicular'], seasons: ['summer', 'spring'], energy: ['low', 'medium', 'high'],
+      cravings: ['fresh', 'savoury'], note: 'Crisp, bright and no cooking needed' },
+    { name: 'Overnight Oats with Berries', emoji: '🥣', ingredients: ['oats', 'yoghurt', 'milk', 'berries', 'honey', 'chia seeds'],
+      phases: ['follicular', 'ovulation', 'luteal'], seasons: ['spring', 'summer'], energy: ['low'],
+      cravings: ['sweet', 'fresh'], note: 'Make it tonight, thank yourself tomorrow' },
+    { name: 'Salmon, Rice & Greens', emoji: '🐟', ingredients: ['salmon', 'rice', 'spinach', 'lemon', 'garlic', 'soy sauce'],
+      phases: ['menstrual', 'ovulation'], seasons: ['spring', 'winter', 'autumn'], energy: ['medium', 'high'],
+      cravings: ['savoury', 'fresh'], note: 'Omega-3s to ease aches and lift mood' },
+    { name: 'Mushroom Risotto', emoji: '🍄', ingredients: ['rice', 'mushroom', 'onion', 'garlic', 'stock', 'parmesan', 'butter'],
+      phases: ['luteal'], seasons: ['autumn', 'winter'], energy: ['medium'],
+      cravings: ['comforting', 'savoury'], note: 'Slow stirring, deeply soothing' },
+    { name: 'Shakshuka', emoji: '🍅', ingredients: ['eggs', 'tomato', 'onion', 'garlic', 'bell pepper', 'paprika', 'cumin', 'bread'],
+      phases: ['menstrual', 'follicular'], seasons: ['spring', 'autumn', 'winter'], energy: ['low', 'medium'],
+      cravings: ['spicy', 'savoury', 'comforting'], note: 'One pan, rich in iron and protein' },
+    { name: 'Chicken Noodle Soup', emoji: '🍜', ingredients: ['chicken', 'noodles', 'carrot', 'celery', 'onion', 'garlic', 'stock'],
+      phases: ['menstrual', 'luteal'], seasons: ['winter', 'autumn'], energy: ['low'],
+      cravings: ['comforting', 'savoury'], note: 'Gentle and hydrating on slow days' },
+    { name: 'Veggie Fried Rice', emoji: '🍚', ingredients: ['rice', 'eggs', 'peas', 'carrot', 'spring onion', 'soy sauce', 'garlic'],
+      phases: ['follicular', 'luteal'], seasons: ['spring', 'summer', 'autumn', 'winter'], energy: ['low', 'medium'],
+      cravings: ['savoury', 'comforting'], note: 'The best home for leftover rice' },
+    { name: 'Roasted Veg & Halloumi Traybake', emoji: '🧀', ingredients: ['halloumi', 'courgette', 'bell pepper', 'red onion', 'cherry tomatoes', 'olive oil'],
+      phases: ['ovulation', 'follicular'], seasons: ['summer', 'autumn'], energy: ['low', 'medium'],
+      cravings: ['savoury', 'fresh'], note: 'Pop it in the oven and put your feet up' },
+    { name: 'Banana Pancakes', emoji: '🥞', ingredients: ['banana', 'eggs', 'oats', 'cinnamon', 'honey'],
+      phases: ['luteal', 'menstrual'], seasons: ['spring', 'summer', 'autumn', 'winter'], energy: ['low', 'medium'],
+      cravings: ['sweet', 'comforting'], note: 'Magnesium-rich comfort for sweet cravings' },
+    { name: 'Thai Green Curry', emoji: '🥥', ingredients: ['chicken', 'coconut milk', 'green curry paste', 'green beans', 'bell pepper', 'rice', 'lime'],
+      phases: ['ovulation', 'luteal'], seasons: ['summer', 'winter'], energy: ['medium', 'high'],
+      cravings: ['spicy', 'comforting'], note: 'Fragrant heat with a creamy finish' },
+    { name: 'Beetroot & Goat Cheese Grain Bowl', emoji: '🥙', ingredients: ['quinoa', 'beetroot', 'goat cheese', 'spinach', 'walnuts', 'lemon'],
+      phases: ['menstrual', 'follicular'], seasons: ['autumn', 'winter', 'spring'], energy: ['medium', 'high'],
+      cravings: ['fresh', 'savoury'], note: 'Earthy, iron-boosting and colourful' },
+    { name: 'Dark Chocolate Yoghurt Bowl', emoji: '🍫', ingredients: ['yoghurt', 'dark chocolate', 'berries', 'almonds', 'honey'],
+      phases: ['luteal', 'menstrual'], seasons: ['summer', 'spring', 'autumn', 'winter'], energy: ['low'],
+      cravings: ['sweet'], note: 'A treat with magnesium and protein' }
+  ];
+
+  const LABEL = Object.fromEntries(Object.values(OPTIONS).flat());
+  const CYCLE_NOTE = { menstrual: 'menstrual phase', follicular: 'follicular phase', ovulation: 'ovulation', luteal: 'luteal phase' };
+
+  /* ======================================================
+     Storage helpers (localStorage may throw in private mode)
+     ====================================================== */
+  const store = {
+    get(k, fallback) { try { const v = localStorage.getItem(k); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} }
+  };
+
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const el = (tag, props = {}, ...kids) => {
+    const n = Object.assign(document.createElement(tag), props);
+    kids.forEach(k => n.append(k));
+    return n;
+  };
+
+  /* ======================================================
+     Forgiving ingredient matching
+     ====================================================== */
+  // Words too generic to count as a match on their own.
+  const GENERIC = new Set(['oil', 'sauce', 'fresh', 'green', 'red', 'white', 'black', 'dried', 'cherry',
+                           'spring', 'sweet', 'paste', 'powder', 'of', 'and', 'the', 'cheese', 'milk']);
+
+  function singular(w) {
+    if (w.length > 4 && w.endsWith('ies')) return w.slice(0, -3) + 'y';      // berries -> berry
+    if (w.length > 4 && /(oes|shes|ches|xes)$/.test(w)) return w.slice(0, -2); // tomatoes -> tomato
+    if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1);
+    return w;
+  }
+  const words = s => s.toLowerCase().replace(/[^a-z\s]/g, ' ').split(/\s+/).filter(Boolean).map(singular);
+  const norm = s => words(s).join(' ');
+
+  // Does the user's item `have` satisfy the meal ingredient `need`?
+  function matches(have, need) {
+    const h = norm(have), n = norm(need);
+    if (!h || !n) return false;
+    if (h === n) return true;
+    const hw = words(have), nw = words(need);
+    // Whole-phrase containment ("chicken breast" ~ "chicken", "tomato" ~ "cherry tomatoes")
+    const hs = ' ' + h + ' ', ns = ' ' + n + ' ';
+    if (hs.includes(ns) || ns.includes(hs)) {
+      // But don't let a single generic word ("oil") match on its own
+      const shorter = hw.length <= nw.length ? hw : nw;
+      if (!shorter.every(w => GENERIC.has(w))) return true;
+    }
+    // Any meaningful word overlap, allowing partial words of 4+ letters ("parm" ~ "parmesan")
+    return hw.some(a => !GENERIC.has(a) && nw.some(b => !GENERIC.has(b) &&
+      (a === b || (Math.min(a.length, b.length) >= 4 && (a.startsWith(b) || b.startsWith(a))))));
+  }
+
+  const isStaple = ing => STAPLES.some(s => norm(s) === norm(ing));
+  const userHas = ing => state.ingredients.some(h => matches(h, ing));
+
+  /* ======================================================
+     State
+     ====================================================== */
+  function seasonFromDate(d = new Date()) {
+    const m = d.getMonth(); // northern hemisphere
+    if (m >= 2 && m <= 4) return 'spring';
+    if (m >= 5 && m <= 7) return 'summer';
+    if (m >= 8 && m <= 10) return 'autumn';
+    return 'winter';
+  }
+
+  const state = {
+    ingredients: store.get('fridge.ingredients', []),
+    energy: 'medium',
+    season: seasonFromDate(),
+    cycle: '',
+    cravings: new Set(),
+    goals: '',
+    results: [],
+    selected: new Set(),
+    checked: new Set()
+  };
+
+  /* ======================================================
+     Step 1: ingredients
+     ====================================================== */
+  function addIngredients(text) {
+    const items = String(text).split(/[,\n;]+/).map(s => s.trim().toLowerCase().replace(/\.$/, '')).filter(Boolean);
+    let added = 0;
+    for (const item of items) {
+      if (item.length > 40) continue;
+      if (!state.ingredients.some(x => norm(x) === norm(item))) { state.ingredients.push(item); added++; }
+    }
+    saveIngredients();
+    renderChips();
+    return added;
+  }
+  function removeIngredient(item) {
+    state.ingredients = state.ingredients.filter(x => x !== item);
+    saveIngredients();
+    renderChips();
+  }
+  const saveIngredients = () => store.set('fridge.ingredients', state.ingredients);
+
+  function renderChips() {
+    const box = $('#chips');
+    box.replaceChildren(...state.ingredients.map(item => {
+      const btn = el('button', { type: 'button', textContent: '×', title: 'Remove' });
+      btn.setAttribute('aria-label', 'Remove ' + item);
+      btn.onclick = () => removeIngredient(item);
+      return el('span', { className: 'chip' }, item, btn);
+    }));
+    const n = state.ingredients.length;
+    $('#ingCount').textContent = n;
+    $('#emptyIng').hidden = n > 0;
+    $('#clearAll').hidden = n === 0;
+    renderSuggestions();
+  }
+
+  function renderSuggestions() {
+    const left = SUGGESTIONS.filter(s => !state.ingredients.some(x => norm(x) === norm(s)));
+    $('#suggest').replaceChildren(...left.map(s => {
+      const b = el('button', { type: 'button', textContent: '+ ' + s });
+      b.onclick = () => addIngredients(s);
+      return b;
+    }));
+  }
+
+  $('#addForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const inp = $('#ingInput');
+    if (inp.value.trim()) addIngredients(inp.value);
+    inp.value = '';
+    inp.focus();
+  });
+  $('#clearAll').onclick = () => {
+    if (!confirm('Clear all ingredients?')) return;
+    state.ingredients = [];
+    saveIngredients();
+    renderChips();
+  };
+
+  /* ---------- Photo upload ---------- */
+  let photo = null; // { dataUrl, base64, mediaType }
+
+  const drop = $('#drop'), fileInput = $('#fileInput');
+  drop.addEventListener('click', () => fileInput.click());
+  drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+  fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadPhoto(fileInput.files[0]); });
+  ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => {
+    const f = [...(e.dataTransfer?.files || [])].find(f => f.type.startsWith('image/'));
+    if (f) loadPhoto(f); else setStatus('#photoStatus', "That doesn't look like an image — try a photo.", 'err');
+  });
+
+  // Downscale big phone photos to keep the request small (max 1568px on the long edge).
+  function loadPhoto(file) {
+    if (!file.type.startsWith('image/')) return setStatus('#photoStatus', 'Please choose an image file.', 'err');
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const max = 1568, scale = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale);
+      c.height = Math.round(img.height * scale);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      const dataUrl = c.toDataURL('image/jpeg', 0.85);
+      URL.revokeObjectURL(url);
+      photo = { dataUrl, base64: dataUrl.split(',')[1], mediaType: 'image/jpeg' };
+      $('#preview').src = dataUrl;
+      $('#preview').hidden = false;
+      $('#dropEmpty').hidden = true;
+      $('#photoActions').hidden = false;
+      setStatus('#photoStatus', 'Looking good! Tap "Read my photo" when ready.');
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); setStatus('#photoStatus', "Sorry, I couldn't open that image.", 'err'); };
+    img.src = url;
+  }
+
+  $('#removePhoto').onclick = () => {
+    photo = null;
+    fileInput.value = '';
+    $('#preview').hidden = true;
+    $('#preview').removeAttribute('src');
+    $('#dropEmpty').hidden = false;
+    $('#photoActions').hidden = true;
+    setStatus('#photoStatus', '');
+  };
+
+  function setStatus(sel, msg, kind = '') {
+    const n = $(sel);
+    n.textContent = msg;
+    n.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  /* ---------- API key (localStorage only) ---------- */
+  const getKey = () => store.get('fridge.apiKey', '');
+  $('#apiKey').value = getKey();
+  $('#saveKey').onclick = () => {
+    const k = $('#apiKey').value.trim();
+    if (k) { store.set('fridge.apiKey', k); setStatus('#keyStatus', 'Saved in this browser. ✓', 'ok'); }
+    else { store.del('fridge.apiKey'); setStatus('#keyStatus', 'Key removed.'); }
+  };
+
+  /* ---------- Read photo with Claude ---------- */
+  $('#readPhoto').onclick = async () => {
+    if (!photo) return;
+    const key = getKey() || $('#apiKey').value.trim();
+    if (!key) {
+      setStatus('#photoStatus', "Reading photos needs a Claude API key (see below). No worries — you can type your ingredients instead!", 'err');
+      $('details.key').open = true;
+      return;
+    }
+    const btn = $('#readPhoto');
+    btn.disabled = true;
+    btn.textContent = '⏳ Reading…';
+    setStatus('#photoStatus', 'Having a good look in your fridge…');
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+          // Lets the API retry on a fallback model if a request is declined.
+          'anthropic-beta': 'server-side-fallback-2026-07-01'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-5-5',
+          max_tokens: 1024,
+          output_config: { effort: 'low' },
+          fallbacks: 'default',
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: photo.mediaType, data: photo.base64 } },
+              { type: 'text', text: 'List the food ingredients visible in this photo. Reply with ONLY a comma-separated list of short, ' +
+                'lowercase, generic ingredient names (e.g. "eggs, spinach, cheddar, milk"). No brands, no quantities, no extra words. ' +
+                'If you cannot see any food, reply with NONE.' }
+            ]
+          }]
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = data?.error?.message || res.statusText;
+        throw new Error(res.status === 401 ? 'That API key was not accepted. Please check it.' : msg);
+      }
+      if (data.stop_reason === 'refusal') throw new Error("Claude couldn't read this photo. Try typing instead.");
+      const text = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join(' ').trim();
+      if (!text || /^none\.?$/i.test(text)) {
+        setStatus('#photoStatus', "I couldn't spot any food in that one. Try another angle, or type it in.", 'err');
+      } else {
+        const n = addIngredients(text);
+        setStatus('#photoStatus', n ? `Found and added ${n} ingredient${n === 1 ? '' : 's'}. ✓` : 'Everything I spotted is already on your list. ✓', 'ok');
+      }
+    } catch (err) {
+      setStatus('#photoStatus', 'Sorry — ' + (err.message || 'something went wrong') + ' You can always type your ingredients instead.', 'err');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '✨ Read my photo';
+    }
+  };
+
+  /* ======================================================
+     Step 2: check-in pills
+     ====================================================== */
+  function renderPills() {
+    document.querySelectorAll('[data-group]').forEach(row => {
+      const group = row.dataset.group;
+      const multi = group === 'cravings';
+      row.replaceChildren(...OPTIONS[group].map(([value, label]) => {
+        const b = el('button', { type: 'button', className: 'pill', textContent: label });
+        if (multi) {
+          b.setAttribute('aria-pressed', state.cravings.has(value));
+          b.onclick = () => {
+            state.cravings.has(value) ? state.cravings.delete(value) : state.cravings.add(value);
+            b.setAttribute('aria-pressed', state.cravings.has(value));
+          };
+        } else {
+          b.setAttribute('role', 'radio');
+          b.setAttribute('aria-checked', state[group] === value);
+          b.onclick = () => {
+            state[group] = value;
+            row.querySelectorAll('.pill').forEach((p, i) => p.setAttribute('aria-checked', OPTIONS[group][i][0] === value));
+          };
+        }
+        return b;
+      }));
+    });
+  }
+
+  $('#goals').addEventListener('input', e => { state.goals = e.target.value.trim(); });
+
+  $('#suggestBtn').onclick = () => {
+    if (!state.ingredients.length) {
+      setStatus('#suggestStatus', 'Add a few ingredients in step 1 first — even two or three is plenty.', 'err');
+      $('#step-1').scrollIntoView();
+      setTimeout(() => $('#ingInput').focus({ preventScroll: true }), 500);
+      return;
+    }
+    setStatus('#suggestStatus', '');
+    state.results = scoreMeals();
+    state.selected.clear();
+    renderMeals();
+    $('#step-4').hidden = true;
+    lock(4, true);
+    reveal(3);
+  };
+
+  /* ======================================================
+     Step 3: scoring and meal cards
+     ====================================================== */
+  function scoreMeals() {
+    return MEALS.map(meal => {
+      const needed = meal.ingredients.filter(i => !isStaple(i));
+      const have = needed.filter(userHas);
+      const missing = needed.filter(i => !userHas(i));
+      const share = needed.length ? have.length / needed.length : 0;
+      const reasons = [];
+      let score = share * 5;
+
+      if (meal.energy.includes(state.energy)) { score += 1; reasons.push(LABEL[state.energy].split(' ').pop() + ' energy'); }
+      if (meal.seasons.includes(state.season)) { score += 1; reasons.push('Good for ' + state.season); }
+      if (state.cycle && meal.phases.includes(state.cycle)) { score += 1.5; reasons.push('Suits ' + CYCLE_NOTE[state.cycle]); }
+      for (const c of state.cravings) {
+        if (meal.cravings.includes(c)) { score += 1; reasons.push(LABEL[c].replace(/^\S+\s/, '')); }
+      }
+      if (have.length) reasons.unshift('Uses your ' + have.slice(0, 2).join(' & '));
+      return { meal, needed, have, missing, score, reasons };
+    })
+    .sort((a, b) => b.score - a.score || b.have.length - a.have.length)
+    .slice(0, 6);
+  }
+
+  function renderMeals() {
+    $('#meals').replaceChildren(...state.results.map((r, idx) => {
+      const { meal, needed, have, missing } = r;
+      const pct = needed.length ? Math.round(have.length / needed.length * 100) : 0;
+      const card = el('div', { className: 'card meal', tabIndex: 0 });
+      card.setAttribute('role', 'button');
+      card.setAttribute('aria-pressed', state.selected.has(idx));
+      card.setAttribute('aria-label', `${meal.name}. You have ${have.length} of ${needed.length} ingredients.`);
+
+      const bar = el('div', { className: 'bar' }, el('span'));
+      bar.firstChild.style.width = pct + '%';
+
+      card.append(
+        el('span', { className: 'tick', textContent: '✓', ariaHidden: 'true' }),
+        el('div', { className: 'meal-top' },
+          el('div', { className: 'meal-emoji', textContent: meal.emoji }),
+          el('div', {}, el('h3', { textContent: meal.name }), el('p', { className: 'note', textContent: meal.note }))),
+        el('div', { className: 'tags' }, ...r.reasons.map(t => el('span', { className: 'tag', textContent: t }))),
+        bar,
+        el('div', { className: 'have', textContent: `You have ${have.length} of ${needed.length}` }),
+        missing.length
+          ? el('p', { className: 'need', textContent: 'Need: ' + missing.join(', ') })
+          : el('p', { className: 'need all', textContent: "✨ Everything's here" })
+      );
+
+      const toggle = () => {
+        state.selected.has(idx) ? state.selected.delete(idx) : state.selected.add(idx);
+        card.setAttribute('aria-pressed', state.selected.has(idx));
+        if (state.selected.size) setStatus('#shopStatus', '');
+      };
+      card.addEventListener('click', toggle);
+      card.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+      });
+      return card;
+    }));
+  }
+
+  $('#shopBtn').onclick = () => {
+    if (!state.selected.size) {
+      setStatus('#shopStatus', 'Pick at least one meal first — just tap a card.', 'err');
+      return;
+    }
+    setStatus('#shopStatus', '');
+    state.checked.clear();
+    renderShopping();
+    reveal(4);
+  };
+
+  /* ======================================================
+     Step 4: shopping list
+     ====================================================== */
+  let shopItems = []; // [{ item, meals: [] }]
+
+  function renderShopping() {
+    const chosen = [...state.selected].sort().map(i => state.results[i]);
+    const map = new Map();
+    for (const r of chosen) {
+      for (const ing of r.missing) {
+        const key = norm(ing);
+        if (!map.has(key)) map.set(key, { item: ing, meals: [] });
+        const entry = map.get(key);
+        if (!entry.meals.includes(r.meal.name)) entry.meals.push(r.meal.name);
+      }
+    }
+    shopItems = [...map.values()].sort((a, b) => b.meals.length - a.meals.length || a.item.localeCompare(b.item));
+
+    const n = chosen.length;
+    $('#shopSub').textContent = `For ${n} meal${n === 1 ? '' : 's'} this week: ${chosen.map(r => r.meal.emoji + ' ' + r.meal.name).join(', ')}`;
+
+    const banner = $('#goalBanner');
+    banner.hidden = !state.goals;
+    banner.replaceChildren(el('strong', { textContent: '🎯 This week: ' }), state.goals);
+
+    $('#shopEmpty').hidden = shopItems.length > 0;
+    $('#copyBtn').hidden = shopItems.length === 0;
+    setStatus('#copyStatus', '');
+
+    $('#shopList').replaceChildren(...shopItems.map((s, i) => {
+      const b = el('button', { type: 'button', className: 'shop-item' },
+        el('span', { className: 'box', textContent: '✓', ariaHidden: 'true' }),
+        el('span', {}, el('span', { className: 'name', textContent: s.item }),
+                       el('span', { className: 'for', textContent: 'For ' + s.meals.join(', ') })));
+      b.setAttribute('role', 'checkbox');
+      b.setAttribute('aria-checked', state.checked.has(i));
+      b.onclick = () => {
+        state.checked.has(i) ? state.checked.delete(i) : state.checked.add(i);
+        b.setAttribute('aria-checked', state.checked.has(i));
+      };
+      return el('li', {}, b);
+    }));
+  }
+
+  $('#copyBtn').onclick = async () => {
+    const lines = ['Shopping list 🛒', ...(state.goals ? ['Goals: ' + state.goals] : []), '',
+                   ...shopItems.map(s => `• ${s.item} (${s.meals.join(', ')})`)];
+    const text = lines.join('\n');
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Fallback for older browsers / non-secure contexts
+      const ta = el('textarea', { value: text });
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.append(ta); ta.select();
+      try { document.execCommand('copy'); } catch {}
+      ta.remove();
+    }
+    setStatus('#copyStatus', 'Copied! ✓', 'ok');
+  };
+
+  /* ======================================================
+     Step bar: reveal sections and highlight on scroll
+     ====================================================== */
+  function lock(n, locked) { $(`.stepbar a[data-step="${n}"]`).classList.toggle('locked', locked); }
+
+  function reveal(n) {
+    const sec = $('#step-' + n);
+    sec.hidden = false;
+    lock(n, false);
+    requestAnimationFrame(() => sec.scrollIntoView({ block: 'start' }));
+  }
+
+  // Highlight the step whose section is nearest the top of the viewport.
+  function updateActive() {
+    const offset = Math.max(120, window.innerHeight / 3);
+    let current = 1;
+    for (let i = 1; i <= 4; i++) {
+      const s = $('#step-' + i);
+      if (!s.hidden && s.getBoundingClientRect().top - offset <= 0) current = i;
+    }
+    // At the very bottom of the page, highlight the last visible step
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
+      for (let i = 4; i >= 1; i--) if (!$('#step-' + i).hidden) { current = i; break; }
+    }
+    document.querySelectorAll('.stepbar a').forEach(a => a.classList.toggle('active', +a.dataset.step === current));
+  }
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { updateActive(); ticking = false; });
+  }, { passive: true });
+  window.addEventListener('resize', updateActive);
+
+  /* ---------- Init ---------- */
+  renderChips();
+  renderPills();
+  updateActive();
+})();
+</script>
+</body>
+</html>
